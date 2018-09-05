@@ -1,40 +1,47 @@
 var impDB = require('imp-db');
-var program = require('commander');
-
-program
-    .version('0.0.1')
-    .option('-p, --port <integer>', 'Port for socket server', parseInt)
-    .option('-H, --host <integer>', 'IP for socket server')
-    .option('-f, --db-file <path>', 'JSON File of db. omit for in memory db')
-    .parse(process.argv);
-
-if (program.dbFile !== undefined) {
-    // console.log('>> MODE: json file snaps');
-    var db = new impDB(program.dbFile, false, 1000);
-} else {
-    // console.log('>> MODE: in memory');
-    var db = new impDB();
-}
-
-var net = require('net'),
-    JsonSocket = require('json-socket');
-
-var server = net.createServer();
-if (program.host !== undefined) {
-    server.listen({
-        host: program.host,
-        port: program.port
-    });
-    console.log(`Listen on ${program.host}:${program.port}`);
-} else {
-    server.listen(program.port);
-    console.log(`Listen on localhost:${program.port}`);
-}
-server.on('connection', function (socket) {
-    tick();
-    socket = new JsonSocket(socket);
-    socket.on('message', function (obj) {
+var net = require('net');
+var util = require('util');
+var EventEmitter = require('events').EventEmitter;
+var JsonSocket = require('json-socket');
+var __self;
+var db;
+class impHost{
+    constructor(options){
+        if(options.port){this.port = options.port}
+        if(options.host){this.host = options.host}
+        if(options.file){this.file = options.file}
+        if(options.snapInterval){this.snapInterval = options.snapInterval}
+        if (this.snapInterval == undefined){this.snapInterval = 1000}
+        if (this.file !== undefined) {
+            db = new impDB(this.file, false, this.snapInterval);
+        } else {
+            db = new impDB();
+        }
+        this.createHost();
+    }
+    createHost(){
+        __self = this;
+        this.server = net.createServer();
+        if (this.host !== undefined) {
+            this.server.listen({host: this.host,port: this.port});
+        } else {
+            this.server.listen(this.port);
+        }
+        server.on('connection', function (socket) {
+            socket = new JsonSocket(socket);
+            socket.on('message', function (obj) {
+                this.emit('message',obj);
+                var r = __self.parseMessage(obj)
+            });
+        });
+        this.emit('start');
+    }
+    parseMessage(obj){
         var r = {};
+        if(obj._ == undefined){
+            this.emit('error',{type:'request',desc:'the request header data type not set in message'});
+            return false;
+        }
         switch (obj._) {
             case "set":
                 db.set(obj.key, obj.val);
@@ -84,11 +91,11 @@ server.on('connection', function (socket) {
                 r._ = 'clear';
                 r.status = true;
                 break;
+            default:
+                this.emit('error',{type:'request',desc:'the request data could not be parsed'})
         }
-        try {
-            socket.sendEndMessage(r);
-        } catch (err) {
-            // if a socket closes before a write is complete, an error will be thrown here, handle it however you please
-        }
-    });
-});
+        return r;
+    }
+}
+util.inherits(impHost,EventEmitter);
+module.exports = impHost;
