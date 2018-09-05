@@ -1,6 +1,6 @@
 {
   "name": "imp-db-host",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A JSON Socket server to interface with imp-db",
   "main": "imp-db-host.js",
   "scripts": {

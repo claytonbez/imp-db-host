@@ -1,17 +1,30 @@
 var impDB = require('imp-db');
 var net = require('net');
 var util = require('util');
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('events');
 var JsonSocket = require('json-socket');
 var __self;
 var db;
-class impHost{
-    constructor(options){
-        if(options.port){this.port = options.port}
-        if(options.host){this.host = options.host}
-        if(options.file){this.file = options.file}
-        if(options.snapInterval){this.snapInterval = options.snapInterval}
-        if (this.snapInterval == undefined){this.snapInterval = 1000}
+class impHost extends EventEmitter {
+    constructor() {
+        super();
+    }
+    start(options) {
+        if (options.port) {
+            this.port = options.port
+        }
+        if (options.host) {
+            this.host = options.host
+        }
+        if (options.file) {
+            this.file = options.file
+        }
+        if (options.snapInterval) {
+            this.snapInterval = options.snapInterval
+        }
+        if (this.snapInterval == undefined) {
+            this.snapInterval = 1000
+        }
         if (this.file !== undefined) {
             db = new impDB(this.file, false, this.snapInterval);
         } else {
@@ -19,27 +32,34 @@ class impHost{
         }
         this.createHost();
     }
-    createHost(){
+    createHost() {
+        console.log('create host')
         __self = this;
         this.server = net.createServer();
         if (this.host !== undefined) {
-            this.server.listen({host: this.host,port: this.port});
+            this.server.listen({
+                host: this.host,
+                port: this.port
+            });
         } else {
             this.server.listen(this.port);
         }
-        server.on('connection', function (socket) {
+        this.server.on('connection', function (socket) {
             socket = new JsonSocket(socket);
             socket.on('message', function (obj) {
-                this.emit('message',obj);
+                this.emit('message', obj);
                 var r = __self.parseMessage(obj)
             });
         });
-        this.emit('start');
+        __self.emit('start');
     }
-    parseMessage(obj){
+    parseMessage(obj) {
         var r = {};
-        if(obj._ == undefined){
-            this.emit('error',{type:'request',desc:'the request header data type not set in message'});
+        if (obj._ == undefined) {
+            this.emit('error', {
+                type: 'request',
+                desc: 'the request header data type not set in message'
+            });
             return false;
         }
         switch (obj._) {
@@ -92,10 +112,13 @@ class impHost{
                 r.status = true;
                 break;
             default:
-                this.emit('error',{type:'request',desc:'the request data could not be parsed'})
+                this.emit('error', {
+                    type: 'request',
+                    desc: 'the request data could not be parsed'
+                })
         }
         return r;
     }
 }
-util.inherits(impHost,EventEmitter);
+
 module.exports = impHost;
