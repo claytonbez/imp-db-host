@@ -46,8 +46,13 @@ class impHost extends EventEmitter {
         this.server.on('connection', function (socket) {
             socket = new JsonSocket(socket);
             socket.on('message', function (obj) {
-                this.emit('message', obj);
+                __self.emit('message', obj);
                 var r = __self.parseMessage(obj)
+                socket.sendEndMessage(r);
+            });
+            socket.on('error', function (error) {
+                __self.emit('error', error);
+                
             });
         });
         __self.emit('start');
@@ -55,7 +60,7 @@ class impHost extends EventEmitter {
     parseMessage(obj) {
         var r = {};
         if (obj._ == undefined) {
-            this.emit('error', {
+            __self.emit('error', {
                 type: 'request',
                 desc: 'the request header data type not set in message'
             });
@@ -111,7 +116,7 @@ class impHost extends EventEmitter {
                 r.status = true;
                 break;
             default:
-                this.emit('error', {
+                __self.emit('error', {
                     type: 'request',
                     desc: 'the request data could not be parsed'
                 })
