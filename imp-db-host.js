@@ -33,7 +33,6 @@ class impHost extends EventEmitter {
         this.createHost();
     }
     createHost() {
-        console.log('create host')
         __self = this;
         this.server = net.createServer();
         if (this.host !== undefined) {
